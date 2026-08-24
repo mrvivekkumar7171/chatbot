@@ -574,15 +574,15 @@ def summarize_conversation(state: ChatState) -> dict:
     if existing_summary:
         prompt = (
             f"""
-This is summary of the conversation to date: 
+        This is summary of the conversation to date: 
 
-{existing_summary}
+        {existing_summary}
 
-Extend the summary by taking into account the new messages above.
-"""
+        Extend the summary by taking into account the new messages above.
+        """
         )
     else:
-        prompt = "Create a summary of the conversation above:"
+        prompt = "Create a summary of the above conversation:"
     
     # We send the messages history except the last N messages + the instruction to summarize
     messages_for_summary = state["messages"][:-SHORT_TERM_MEMORY_LIMIT] + [SystemMessage(content=prompt)]
