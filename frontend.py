@@ -1,7 +1,3 @@
-# To run using : docker-compose up -d
-# To check the status : docker ps
-# To run : streamlit run .\frontend.py
-# https://smith.langchain.com/              
 from backend import chatbot, retrieve_all_threads, ingest_pdf, get_thread_metadata, client
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 from langchain_core.tracers.context import collect_runs

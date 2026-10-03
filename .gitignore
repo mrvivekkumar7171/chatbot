@@ -5,3 +5,5 @@ chatbot.db-wal
 __pycache__/
 *.pyc
 storage/
+__pycache__
+.vscode/

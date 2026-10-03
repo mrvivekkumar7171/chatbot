@@ -20,6 +20,7 @@ from langsmith import traceable, Client
 from langgraph.types import interrupt
 from langchain_core.tools import tool
 from pydantic import BaseModel, Field
+from langchain_groq import ChatGroq
 from dotenv import load_dotenv
 import uuid
 
@@ -30,9 +31,10 @@ MAX_TOKENS = int(os.getenv("MAX_TOKENS", 4000))
 WEATHER_KEY = os.getenv("WEATHERSTACK_KEY")
 ALPHA_KEY = os.getenv("ALPHA_VANTAGE_KEY")
 DB_URI = os.getenv("DB_URI")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
-llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
-memory_llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+llm = ChatOpenAI(model="gpt-4o-mini", temperature=0, reasoning_effort="medium")
+memory_llm = ChatGroq(model="openai/gpt-oss-120b", temperature=1, reasoning_effort="medium")
 embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
 client = Client()   
 

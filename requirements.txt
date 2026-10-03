@@ -4,6 +4,7 @@ langchain_mcp_adapters
 langgraph
 langchain_community
 langchain_openai
+langchain_groq
 dotenv
 streamlit
 langchain_core
@@ -11,4 +12,4 @@ fastmcp
 pypdf
 faiss-cpu
 langgraph-checkpoint-postgres
-psycopg[binary,pool]
+psycopg[binary, pool]
