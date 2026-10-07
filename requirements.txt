@@ -1,15 +1,19 @@
 ddgs
 langgraph.checkpoint.sqlite
-langchain_mcp_adapters
 langgraph
+langchain_mcp_adapters
 langchain_community
-langchain_openai
 langchain_groq
+langchain_huggingface
+sentence_transformers
 dotenv
 streamlit
+torchvision
 langchain_core
 fastmcp
 pypdf
 faiss-cpu
+supabase
 langgraph-checkpoint-postgres
 psycopg[binary, pool]
+Pylint

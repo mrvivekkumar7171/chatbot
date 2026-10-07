@@ -1,9 +1,0 @@
-services: 
-  postgres:
-    image: postgres:16 # specify the version of PostgreSQL to be downloaded on docker
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: postgres # name of the default database
-    ports:
-      - "5442:5432"

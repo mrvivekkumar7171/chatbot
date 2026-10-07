@@ -1,9 +1,16 @@
-from backend import chatbot, retrieve_all_threads, ingest_pdf, get_thread_metadata, client
+"""
+Streamlit frontend for the LangGraph AI chatbot, providing chat, conversation history, PDF uploads,
+document information, tool status, feedback, and human-in-the-loop controls. It connects to the 
+backend for chatbot execution, persistent conversations, document processing, and memory.
+"""
+import uuid
+
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 from langchain_core.tracers.context import collect_runs
 from langgraph.types import Command
 import streamlit as st
-import uuid
+
+from backend import chatbot, retrieve_all_threads, ingest_pdf, get_thread_metadata, client
 
 
 # =========================== Utilities ===========================
@@ -69,16 +76,17 @@ if "thread_id" not in st.session_state:
         st.session_state["thread_id"] = url_thread_id
         # Reload history immediately if resuming from URL
         msgs = load_conversation(url_thread_id)
-        
+
         # Convert to UI format immediately so the user sees history on refresh
         temp_history = []
         for msg in msgs:
             if isinstance(msg, HumanMessage):
                 temp_history.append({"role": "user", "content": msg.content})
             elif isinstance(msg, AIMessage) and msg.content:
-                # Filter out empty AI messages (tool calls) and ensure we don't show System/Tool messages
+                # Filter out empty AI messages (tool calls)
+                # and ensure we don't show System/Tool messages
                 temp_history.append({"role": "assistant", "content": msg.content})
-        
+
         st.session_state["message_history"] = temp_history
     else:
         # 2. If no URL param, generate new ID
@@ -97,30 +105,31 @@ if "file_uploader_key" not in st.session_state:
 # Ensure current thread is in the chat_threads list
 add_thread(st.session_state["thread_id"])
 
-thread_key = str(st.session_state["thread_id"])
+THREAD_KEY = str(st.session_state["thread_id"])
 
 # Fetch metadata (uploaded files info) for the current thread
-current_metadata = get_thread_metadata(thread_key)
+current_metadata = get_thread_metadata(THREAD_KEY)
 files_info = current_metadata.get("files", {})
 
 # Prepare the list of threads for the sidebar (reversed to show newest first)
 threads = st.session_state["chat_threads"][::-1]
 selected_thread = None
 
-# We define the user_id here so the backend knows which memory namespace to access. In a real app, this would come from a login system.
+# We define the user_id here so the backend knows which memory namespace to access.
+# In a real app, this would come from a login system.
 CURRENT_USER_ID = "user_123"
 
 # Base configuration for LangGraph execution
 CONFIG = {
     "run_name": "chat_turn",
     "configurable": {
-        "thread_id": thread_key,
+        "thread_id": THREAD_KEY,
         "user_id": CURRENT_USER_ID
-    }, 
+    },
     "metadata": {
-        "thread_id": thread_key,
+        "thread_id": THREAD_KEY,
         "user_id": CURRENT_USER_ID,
-        "model": "gpt-4o-mini",
+        "model": "openai/gpt-oss-20b",
         "temperature": 0.7,
         "parser": "StrOutputParser"
     },
@@ -146,7 +155,11 @@ else:
     st.sidebar.info("No documents uploaded yet.")
 
 # Document upload section
-uploaded_pdf = st.sidebar.file_uploader(" ", type=["pdf"],key=f"uploader_{st.session_state['file_uploader_key']}")
+uploaded_pdf = st.sidebar.file_uploader(
+    " ",
+    type=["pdf"],
+    key=f"uploader_{st.session_state['file_uploader_key']}"
+    )
 
 if uploaded_pdf:
     # Prevent re-indexing the same file
@@ -157,7 +170,7 @@ if uploaded_pdf:
             # Call backend function to process PDF
             summary = ingest_pdf(
                 uploaded_pdf.getvalue(),
-                thread_id=thread_key,
+                thread_id=THREAD_KEY,
                 filename=uploaded_pdf.name,
             )
 
@@ -166,7 +179,7 @@ if uploaded_pdf:
                 st.sidebar.error(summary.get("error", "Processing failed."))
             else:
                 status_box.update(label="✅ Indexed", state="complete")
-                # Increment key to reset uploader widget and re-run to update the file list immediately
+                # Increment key to reset uploader widget and re-run to update the file list
                 st.session_state["file_uploader_key"] += 1
                 st.rerun()
 
@@ -177,11 +190,11 @@ st.sidebar.subheader("History")
 if not threads:
     st.sidebar.write("No past conversations.")
 else:
-    for thread_id in threads:
+    for thread_id_ in threads:
         # Highlight the currently active thread
-        label = f"➤ {thread_id}" if str(thread_id) == thread_key else str(thread_id)
-        if st.sidebar.button(label, key=f"side-thread-{thread_id}"):
-            selected_thread = thread_id
+        label = f"➤ {thread_id_}" if str(thread_id_) == THREAD_KEY else str(thread_id_)
+        if st.sidebar.button(label, key=f"side-thread-{thread_id_}"):
+            selected_thread = thread_id_
 
 
 # ============================ Main Chat UI ============================
@@ -191,46 +204,23 @@ for message in st.session_state["message_history"]:
 
     # For each role in message_history display the message in the chat window
     with st.chat_message(message["role"]):
-        st.markdown(message["content"]) 
-# st.code("pip install pandas") # for code block
-# st.latex("X^2 + Y^2 + 10 = 0") # for latex block
-# import pandas as pd
-# data = {
-#     'Column A': [1, 2, 3],
-#     'Column B': ['A', 'B', 'C']
-# }
-# df = pd.DataFrame()
-# st.dataframe(df) # for dataframe display
-# st.metric("Revenue", "Rs. 3L", "-3%") # for metric display
-# st.json(data) # for json display
-# st.image("https://example.com/image.png") # for image display
-# st.video("https://example.com/video.mp4") # for video display
-# st.error("This is an error message") # for error message display
-# st.success("This is a success message") # for success message display
-# st.info("This is an info message") # for info message display
-# st.warning("This is a warning message") # for warning message display
-# bar = st.progress(50) # for progress bar display
-# import time
-# for i in range(1, 100):
-#     time.sleep(0.1)
-#     bar.progress(i + 1)
-# gender = st.selectbox('Select an option', ['Option 1', 'Option 2', 'Option 3']) # for selectbox display
+        st.markdown(message["content"])
 
 # 2. Feedback Scoring
 if st.session_state.get("last_run_id"):
     # Display thumbs-up/down feedback
     # We use the run_id as part of the key so the widget resets for new responses
-    feedback = st.feedback("thumbs", key=f"feedback_{st.session_state.last_run_id}")
-    
-    if feedback is not None:
+    FEEDBACK = st.feedback("thumbs", key=f"feedback_{st.session_state.last_run_id}")
+
+    if FEEDBACK is not None:
         # feedback value is 1 for Thumbs Up, 0 for Thumbs Down
-        score = 1 if feedback == 1 else 0
-        
+        SCORE = 1 if FEEDBACK == 1 else 0
+
         # Send feedback to LangSmith linked to the specific run_id
         client.create_feedback(
             st.session_state.last_run_id,
             key="user_score",
-            score=score
+            score=SCORE
         )
         st.toast("Feedback recorded!", icon="📝")
         del st.session_state["last_run_id"]
@@ -253,7 +243,7 @@ def stream_graph_response(input_payload):
 
     Args:
         input_payload (dict or Command): The input to the graph (user message or resume command).
-    
+
     Returns:
         str: The final aggregated text content from the assistant.
     """
@@ -263,7 +253,8 @@ def stream_graph_response(input_payload):
 
         def ai_only_stream():
             """
-            Internal generator to yield (Stream) text chunks (the assistant messages) from the chatbot response to the UI.
+            Internal generator to yield (Stream) text chunks (the assistant messages)
+            from the chatbot response to the UI.
             """
             # 1. Wrap execution in collect_runs to capture the trace ID
             with collect_runs() as cb:
@@ -272,28 +263,39 @@ def stream_graph_response(input_payload):
                     config=CONFIG,
                     stream_mode="messages",
                 ):
-                    # Filter out the internal node output : LangGraph streams ALL LLM calls. We only want the 'chat_node' output.
-                    if (metadata.get("langgraph_node") == "summarize_conversation") or (metadata.get("langgraph_node") == "remember_node"):
+                    # Filter out the internal node output : LangGraph streams ALL LLM calls.
+                    # We only want the 'chat_node' output.
+                    if (
+                        (metadata.get("langgraph_node") == "summarize_conversation")
+                        or (metadata.get("langgraph_node") == "remember_node")
+                        ):
                         continue
 
                     # Handle Tool Execution Updates
                     if isinstance(message_chunk, ToolMessage):
                         tool_name = getattr(message_chunk, "name", "tool")
                         if status_holder["box"] is None:
-                            status_holder["box"] = st.status(f"🔧 Using `{tool_name}` …", expanded=True)
+                            status_holder["box"] = st.status(
+                                f"🔧 Using `{tool_name}` …",
+                                expanded=True
+                                )
                         else:
-                            status_holder["box"].update(label=f"🔧 Using `{tool_name}` …", state="running", expanded=True)
+                            status_holder["box"].update(
+                                label=f"🔧 Using `{tool_name}` …",
+                                state="running", expanded=True
+                                )
 
                     # Handle AI Text Updates
                     if isinstance(message_chunk, AIMessage):
                         if message_chunk.content:
-                            yield message_chunk.content # Yield the content of AIMessage instead of Return for streaming
-                
+                            # Yield the content of AIMessage instead of Return for streaming
+                            yield message_chunk.content
+
                 # 2. Capture the run_id of the completed generation and store in session state
                 if cb.traced_runs:
                     # Find the root run named "chat_turn" explicitly
                     root_run = next(
-                        (run for run in cb.traced_runs if run.name == "chat_turn"), 
+                        (run for run in cb.traced_runs if run.name == "chat_turn"),
                         None
                     )
                     if root_run:
@@ -315,30 +317,42 @@ def stream_graph_response(input_payload):
 if pending_interrupt_value:
     # HITL MODE (Waiting for user approval)
     st.info(f"⚠️ Action Required: **{pending_interrupt_value}**")
-    
+
     col1, col2 = st.columns([1, 1])
     decision = None
-    
+
     with col1:
-        if st.button("✅ Approve"): 
+        if st.button("✅ Approve"):
             decision = "yes"
             st.balloons()
     with col2:
-        if st.button("❌ Deny"): decision = "no"
+        if st.button("❌ Deny"):
+            decision = "no"
 
     if decision:
         # Add decision to history for UI consistency
-        st.session_state["message_history"].append({"role": "user", "content": f"[Decision: {decision}]"})
-        
+        st.session_state["message_history"].append(
+                {
+                    "role": "user",
+                    "content": f"[Decision: {decision}]"
+                }
+            )
+
         # Resume the graph execution with the user's decision
         response_content = stream_graph_response(Command(resume=decision))
-        
+
         # Append assistant's follow-up response
-        st.session_state["message_history"].append({"role": "assistant", "content": response_content})
+        st.session_state["message_history"].append(
+            {
+                "role": "assistant",
+                "content": response_content
+                }
+            )
         st.rerun()
 else:
     # STANDARD CHAT MODE
-    user_input = st.chat_input("Type here ...") # st.text_input or st.number_input or st.date_input
+    # st.text_input or st.number_input or st.date_input
+    user_input = st.chat_input("Type here ...")
 
     if user_input:
         # Append user message to local history and display
@@ -348,17 +362,17 @@ else:
 
         # Send message to backend and stream response
         response = stream_graph_response({"messages": [HumanMessage(content=user_input)]})
-        
+
         # Append assistant response to local history
         st.session_state["message_history"].append({"role": "assistant", "content": response})
-        
+
         st.rerun() # Reload UI to display approval buttons
 
 # 6. Thread Switching Logic
 if selected_thread:
     st.session_state["thread_id"] = selected_thread
     st.query_params["thread_id"] = str(selected_thread)
-    
+
     # Reload full conversation history from backend
     messages = load_conversation(selected_thread)
 
