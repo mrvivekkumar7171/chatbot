@@ -8,10 +8,10 @@ import uuid
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 from langchain_core.tracers.context import collect_runs
 from langgraph.types import Command
+from langsmith import Client
 import streamlit as st
 
-from backend import chatbot, retrieve_all_threads, ingest_pdf, get_thread_metadata, client
-
+from backend import chatbot, retrieve_all_threads, ingest_pdf, get_thread_metadata
 
 # =========================== Utilities ===========================
 def generate_thread_id()  -> uuid.UUID:
@@ -217,7 +217,7 @@ if st.session_state.get("last_run_id"):
         SCORE = 1 if FEEDBACK == 1 else 0
 
         # Send feedback to LangSmith linked to the specific run_id
-        client.create_feedback(
+        Client().create_feedback(
             st.session_state.last_run_id,
             key="user_score",
             score=SCORE

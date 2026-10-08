@@ -200,13 +200,113 @@ streamlit run frontend.py
 https://smith.langchain.com/
 
 ## Features to Add in the Future
-1. Make Code more modular
 1. Use below platform's api key for Low-frequency background tasks such as summarization, labeling/classification chat, metadata generation, extracting entities, rewriting, tagging, etc.
 - Google Gemini API
 - Groq
-2. Use nosql database online using free tier for storing and retrieving data efficiently, especially for unstructured or semi-structured data.
-4. Generate embedding once and use multiple times for different tasks to save computation and improve performance.
-5. Image and audio models
+2. Image and audio models: multimodal AI
 check if there is max terns or not to prevent infinte loop if the model is not able to generate a response. If the model reaches the maximum number of turns, it should stop generating responses and return an appropriate message to the user.
-6. find do we can add bash tool in python code to run bash commands and get the output. This can be useful for automating tasks, running scripts, and interacting with the system.
-7. Self-Modifying Coding Agent
+orchestration
+3. find do we can add bash tool in python code to run bash commands and get the output. This can be useful for automating tasks, running scripts, and interacting with the system.
+4. Self-Modifying Coding Agent
+5. Add user authentication and authorization
+6. Dockerize the application
+7. 
+```
+app/
+│
+├── config/
+│   └── settings.py
+│
+├── models/
+│   ├── state.py
+│   └── schemas.py
+│
+├── llm/
+│   ├── factory.py
+│   └── embeddings.py
+│
+├── db/
+│   ├── postgres.py
+│   ├── repositories/
+│   │   ├── conversations.py
+│   │   ├── messages.py
+│   │   ├── memories.py
+│   │   └── documents.py
+│   └── migrations/
+│
+├── memory/
+│   ├── service.py
+│   ├── semantic.py
+│   └── long_term.py
+│
+├── rag/
+│   ├── ingestion.py
+│   ├── retrieval.py
+│   └── service.py
+│
+├── tools/
+│   ├── web_search.py
+│   ├── calculator.py
+│   ├── stocks.py
+│   ├── weather.py
+│   ├── purchase.py
+│   ├── rag.py
+│   └── registry.py
+│
+├── graph/
+│   ├── nodes.py
+│   ├── routing.py
+│   └── builder.py
+│
+└── frontend/
+    └── streamlit_app.py
+```
+8. dependency injection: Currently modules directly use globals that is created by the backend at import time. This makes testing difficult. run weather tool using fake API etc.
+9. conversation summarization
+10. message deletion
+11. user identity
+12. database/application separation
+13. Error correction for LangSmith feedback, Summarization and Web search for 
+
+
+Now i want you to create an detailed design to implement LLM, database, tools and RAG seperation towards modularity. Once it willl done i will do the rest of modularity and other features and improvement. But I will do this in new chat session with you. So, you just draft the step by step design to implement modularity in the current codebase. Also ask the chatbot to perform taks one by one or step by step.
+Make a package such that Each tool should have one responsibility.
+```
+tools/
+    __init__.py
+    web_search.py
+    calculator.py
+    stocks.py
+    weather.py
+    rag.py
+    purchase.py
+    registry.py
+```
+Also, i want tools should not directly own infrastructure. So, that i can replace without rewriting the LangGraph workflow.
+```
+WeatherTool
+   ↓
+WeatherService
+   ↓
+Weather API client
+```
+```
+rag_tool
+   ↓
+RAGService
+   ↓
+VectorRepository
+   ↓
+PostgreSQL
+```
+3. I would also introduce a tool registry having something conceptually like this inside tools/registry.py
+```
+ALL_TOOLS = [
+    web_search_tool,
+    calculator_tool,
+    stock_price_tool,
+    purchase_stock_tool,
+    weather_tool,
+    rag_tool,
+]
+```
