@@ -34,6 +34,7 @@ from tools_registry import create_tool_registry
 from tools.purchase import purchase_stock
 from tools.calculator import calculator
 from tools.rag import create_rag_tool
+from tools.sandbox import safe_write_code, shell_tool
 
 from graph.builder import build_chatbot
 
@@ -83,6 +84,8 @@ tools = create_tool_registry(
     rag_tool=rag_tool,
     purchase_stock=purchase_stock,
     calculator=calculator,
+    shell_tool=shell_tool,
+    safe_write_code=safe_write_code,
 )
 
 

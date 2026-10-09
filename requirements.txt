@@ -10,7 +10,6 @@ dotenv
 streamlit
 torchvision
 langchain_core
-fastmcp
 pypdf
 faiss-cpu
 supabase

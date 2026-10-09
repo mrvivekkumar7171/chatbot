@@ -1,0 +1,8 @@
+.env
+.git
+.gitignore
+__pycache__
+*.py[cod]
+chatbot.db*
+.streamlit/secrets.toml
+workspace

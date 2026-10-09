@@ -49,6 +49,10 @@ The user’s memory (which may be empty) is provided as:
 {files_context}
 
 For questions about the uploaded document(s), call the `rag_tool` and include the thread_id `{thread_id}`. If no document is available, ask the user to upload a PDF.
+
+Before changing files, inspect them with `shell_tool`. Use `safe_write_code`
+for all file writes; never use shell redirection, pipes, or destructive commands.
+File writes are limited to the dedicated agent workspace.
 """
 def create_graph_nodes(
     *,

@@ -1,121 +1,11 @@
 ## Self Modifying Coding Agent
+![Workflow](/docs/img/langgraph_workflow.png)
+
+## Server Setup Instructions
 
 For API key : https://www.alphavantage.co/support/#api-key
 Supabase pgvector → similarity search
 
-**Database**
-```
-Supabase
-│
-├── PostgreSQL
-│   │
-│   ├── documents metadata
-│   │   ├── filename
-│   │   ├── thread_id
-│   │   ├── page_count
-│   │   └── chunk_count
-│   │
-│   ├── document_chunks
-│   │   ├── content
-│   │   ├── page_number
-│   │   ├── metadata
-│   │   ├── document embedding (pgvector, 384 dimensions)
-│   │   └── vector similarity search index function
-│   │
-│   ├── LangGraph checkpoints
-│   │   └── Chat history / conversation state
-│   │
-│   └── LangGraph Store
-│       └── Long-term user memory
-│
-└── Storage
-    └── documents/
-        ├── <thread_id>/
-        │   ├── <filename 1>.pdf
-        │   └── <filename 2>.pdf
-        │
-        └── <thread_id>/
-            └── <filename 1>.pdf
-```
-
-**User Upload Files**
-```
-PDF uploads PDF
-   ↓
-Streamlit file uploader
-   ↓
-Backend ingest_pdf()
-   ↓
-Upload original PDF
-   ↓
-Supabase Storage
-   │
-   └── documents/<thread_id>/<filename>.pdf
-   ↓
-PyPDFLoader
-   ↓
-Extract PDF text
-   ↓
-RecursiveCharacterTextSplitter
-   ↓
-Create text chunks
-   ↓
-HuggingFaceEmbeddings
-   ↓
-384-dimensional embeddings
-   ↓
-extract PDF text
-   ↓
-split into chunks using document_chunks
-   ↓
-Supabase PostgreSQL
-   │
-   ├── documents
-   │      └── document metadata
-   │
-   └── document_chunks
-          ├── chunk text
-          ├── page number
-          ├── metadata
-          └── embedding pgvector
-```
-
-**Rag_tool**
-```text
-User question
-       ↓
-LangGraph chat_node
-       ↓
-Groq LLM
-       ↓
-Is this a question about an uploaded PDF?
-       │
-       ├── No
-       │    ↓
-       │  Normal response / other tools
-       │
-       └── Yes
-            ↓
-         rag_tool
-            ↓
-         Generate query embedding
-            ↓
-         384-dimensional vector
-            ↓
-         Supabase RPC match_document_chunks(...)
-            ↓
-         HNSW / pgvector similarity search for the thread_id
-            ↓
-         Top 4 matching chunks
-            ↓
-         Return relevant context
-            ↓
-         Groq LLM
-            ↓
-         Final answer
-```
-
-## Setup Instructions
 1. Supabase Table Creation for documents and document_chunks
 Setup vector (pgvector) in Extensions
 - Database → Extensions → vector extension → Enable
@@ -262,43 +152,6 @@ semantic index.
 The application creates LangGraph checkpoint and store tables automatically
 when `backend.py` starts. Do not manually create those tables.
 
-## Optional semantic-history maintenance
-
-To update an indexed turn manually:
-
-```sql
-update conversation_turns
-set user_content = 'Updated user text',
-    assistant_content = 'Updated assistant text',
-    content = 'User: Updated user text
-Assistant: Updated assistant text',
-    updated_at = now()
-where user_id = 'user_123'
-  and thread_id = '<thread-id>'
-  and turn_id = '<turn-id>';
-```
-
-If message text is changed manually, regenerate its `embedding` with the same
-`all-MiniLM-L6-v2` model before relying on semantic search. The application
-normally performs this update through an upsert when a completed turn is
-indexed.
-
-To delete one turn, all turns for one thread, or all history for one user:
-
-```sql
-delete from conversation_turns
-where user_id = 'user_123'
-  and thread_id = '<thread-id>'
-  and turn_id = '<turn-id>';
-
-delete from conversation_turns
-where user_id = 'user_123'
-  and thread_id = '<thread-id>';
-
-delete from conversation_turns
-where user_id = 'user_123';
-```
-
 ### Step 4: Create the document storage bucket
 
 Supabase Dashboard → Storage → New bucket → documents
@@ -319,10 +172,30 @@ From the project directory, run:
 streamlit run frontend.py
 ```
 
-On startup, the application will automatically initialize the LangGraph
-checkpoint and long-term-memory store tables.
+On startup, the application will automatically initialize the LangGraph checkpoint and long-term-memory store tables.
 
-### Step 7: Visit LangSmith
+### Step 7: Run in the Docker sandbox
+
+The terminal tool only permits read-only inspection commands, and code writes are restricted to `/app/workspace`. Build and run the container from the project directory:
+
+```powershell
+docker build -t self-mod-agent .
+docker run --rm -p 8501:8501 --name agent-container `
+  -v "${PWD}\workspace:/app/workspace" `
+  self-mod-agent
+```
+
+On Bash or macOS/Linux, use this equivalent volume mount:
+
+```shell
+docker run --rm -p 8501:8501 --name agent-container \
+  -v "$(pwd)/workspace:/app/workspace" \
+  self-mod-agent
+```
+
+Only the `workspace` directory is mounted from the host, so generated files remain persistent without exposing the rest of the host filesystem.
+
+### Step 8: Visit LangSmith
 
 https://smith.langchain.com/
 
@@ -330,6 +203,4 @@ https://smith.langchain.com/
 1. Image and audio models: multimodal AI
 check if there is max terns or not to prevent infinte loop if the model is not able to generate a response. If the model reaches the maximum number of turns, it should stop generating responses and return an appropriate message to the user.
 orchestration
-2. find do we can add bash tool in python code to run bash commands and get the output. This can be useful for automating tasks, running scripts, and interacting with the system.
-3. Add user authentication and authorization
-4. Dockerize the application
+2. Add user authentication and authorization

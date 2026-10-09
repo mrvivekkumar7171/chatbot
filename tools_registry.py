@@ -8,6 +8,8 @@ def create_tool_registry(
     purchase_stock,
     get_weather_data,
     rag_tool,
+    shell_tool,
+    safe_write_code,
 ):
     """_summary_
 
@@ -18,6 +20,8 @@ def create_tool_registry(
         purchase_stock (_type_): _description_
         get_weather_data (_type_): _description_
         rag_tool (_type_): _description_
+        shell_tool (_type_): Restricted read-only terminal tool.
+        safe_write_code (_type_): AST-validated workspace file writer.
 
     Returns:
         _type_: _description_
@@ -29,4 +33,6 @@ def create_tool_registry(
         purchase_stock,
         get_weather_data,
         rag_tool,
+        shell_tool,
+        safe_write_code,
     ]
