@@ -20,7 +20,9 @@ TASK:
 - If there is nothing memory-worthy, return should_write=false and an empty list.
 """
 
-# ==================== Memory Schemas (Pydantic) ====================
+
+
+# ==================== Memory Schemas ====================
 class MemoryItem(BaseModel):
     """
     Schema for a single memory fact.

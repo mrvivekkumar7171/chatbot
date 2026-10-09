@@ -11,7 +11,10 @@ from langgraph.types import Command
 from langsmith import Client
 import streamlit as st
 
-from backend import chatbot, retrieve_all_threads, ingest_pdf, get_thread_metadata
+from backend import chatbot, retrieve_all_threads, get_thread_metadata, ingest_pdf
+
+# Replace this with the authenticated user's stable identifier when auth is added.
+CURRENT_USER_ID = "user_123"
 
 # =========================== Utilities ===========================
 def generate_thread_id()  -> uuid.UUID:
@@ -55,7 +58,14 @@ def load_conversation(thread_id: str) -> list:
         list: A list of message objects (HumanMessage, AIMessage, etc.).
     """
     # Fetch the state from LangGraph using the thread_id
-    state = chatbot.get_state(config={"configurable": {"thread_id": thread_id}})
+    state = chatbot.get_state(
+        config={
+            "configurable": {
+                "thread_id": str(thread_id),
+                "user_id": CURRENT_USER_ID,
+            }
+        }
+    )
     return state.values.get("messages", [])
 
 
@@ -115,13 +125,9 @@ files_info = current_metadata.get("files", {})
 threads = st.session_state["chat_threads"][::-1]
 selected_thread = None
 
-# We define the user_id here so the backend knows which memory namespace to access.
-# In a real app, this would come from a login system.
-CURRENT_USER_ID = "user_123"
-
 # Base configuration for LangGraph execution
 CONFIG = {
-    "run_name": "chat_turn",
+    "run_name": "Self_Mod_Coding_Agent",
     "configurable": {
         "thread_id": THREAD_KEY,
         "user_id": CURRENT_USER_ID
@@ -266,9 +272,8 @@ def stream_graph_response(input_payload):
                     # Filter out the internal node output : LangGraph streams ALL LLM calls.
                     # We only want the 'chat_node' output.
                     if (
-                        (metadata.get("langgraph_node") == "summarize_conversation")
-                        or (metadata.get("langgraph_node") == "remember_node")
-                        ):
+                        metadata.get("langgraph_node") != "chat_node"
+                    ):
                         continue
 
                     # Handle Tool Execution Updates

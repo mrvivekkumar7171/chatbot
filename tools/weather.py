@@ -2,16 +2,15 @@
 Weather tool for fetching current weather data.
 """
 from langchain_core.tools import tool
+from services.weather_service import WeatherService
 
-def create_weather_tool(weather_service):
+def create_weather_tool():
     """_summary_
-
-    Args:
-        weather_service (_type_): _description_
 
     Returns:
         _type_: _description_
     """
+    weather_service = WeatherService()
     @tool
     def get_weather_data(city: str) -> dict:
         """Fetch current weather data for a city."""

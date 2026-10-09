@@ -2,6 +2,7 @@
 RAG Service for managing and querying documents.
 """
 import os
+from config.settings import RAG_MAX_PAGES_LIMIT
 
 class RAGService:
     """_summary_
@@ -55,6 +56,7 @@ class RAGService:
         result = self.retriever.retrieve(
             query=query,
             thread_id=thread_id,
+            limit=int(RAG_MAX_PAGES_LIMIT),
         )
 
         context = []

@@ -3,22 +3,18 @@ Nodes for the Graph
 """
 import uuid
 
-from langchain_core.messages import BaseMessage, SystemMessage
+from langchain_core.messages import BaseMessage, SystemMessage, HumanMessage, AIMessage
 from langchain_core.runnables import RunnableConfig
-from langchain_core.messages.utils import (
-    trim_messages,
-    count_tokens_approximately,
-)
 from langgraph.store.base import BaseStore
 from langsmith import traceable
 
 from config.settings import (
-    SHORT_TERM_MEMORY_LIMIT,
-    MAX_TOKENS
+    LONG_CONTEXT_MATCH_LIMIT,
+    RECENT_HISTORY_TURNS,
 )
-
 from graph.state import ChatState
 from graph.memory import (
+    create_memory_extractor,
     MemoryDecision,
     MEMORY_PROMPT,
 )
@@ -54,65 +50,80 @@ The user’s memory (which may be empty) is provided as:
 
 For questions about the uploaded document(s), call the `rag_tool` and include the thread_id `{thread_id}`. If no document is available, ask the user to upload a PDF.
 """
-
 def create_graph_nodes(
     *,
     llm,
     llm_with_tools,
-    memory_extractor,
+    memory_llm,
     document_repository,
+    embeddings,
+    conversation_history_repository,
 ):
     """_summary_
 
     Args:
         llm (_type_): _description_
         llm_with_tools (_type_): _description_
-        memory_extractor (_type_): _description_
+        memory_llm (_type_): _description_
         document_repository (_type_): _description_
 
     Returns:
         _type_: _description_
     """
+
+    memory_llm = create_memory_extractor(memory_llm)
+
     @traceable(tags=["remember"])
-    def remember_node(state: ChatState, config: RunnableConfig, *, store: BaseStore) -> dict:
+    def long_term_memory(state: ChatState, config: RunnableConfig, *, store: BaseStore) -> dict:
         """
-        Analyzes the user's last message to extract and store long-term memories.
+        Analyzes all human messages since the previous memory update.
         """
-        user_id = config["configurable"]["user_id"]
+        configurable = config.get("configurable", {})
+        user_id = configurable.get("user_id")
+        thread_id = configurable.get("thread_id")
+        if not user_id or not thread_id:
+            raise ValueError("Both user_id and thread_id are required.")
         namespace = ("user", user_id, "details")
 
-        # 1. Retrieve existing memories
-        items = store.search(("user", user_id, "details"))
-        if items:
-            existing_memories = "\n".join(it.value.get("data", "") for it in items)
-        else:
-            existing_memories = "(empty)"
+        human_messages = [
+            message
+            for message in state["messages"]
+            if isinstance(message, HumanMessage)
+        ]
+        processed_count = state.get("ltm_processed_human_count", 0)
+        unprocessed_messages = human_messages[processed_count:]
 
-        # 2. Get the latest user message
-        last_message = state["messages"][-1]
-        if not isinstance(last_message, BaseMessage) or last_message.type != "human":
-            # Only analyze human messages for new memory
-            return {}
+        for message in unprocessed_messages:
+            items = store.search(namespace)
+            existing_memories = (
+                "\n".join(it.value.get("data", "") for it in items)
+                if items
+                else "(empty)"
+            )
+            decision: MemoryDecision = memory_llm.invoke(
+                [
+                    SystemMessage(
+                        content=MEMORY_PROMPT.format(
+                            user_details_content=existing_memories
+                        )
+                    ),
+                    {"role": "user", "content": message.content},
+                ]
+            )
 
-        # 3. Analyze for new memories
-        decision : MemoryDecision = memory_extractor.invoke(
-            [
-                SystemMessage(content=MEMORY_PROMPT.format(user_details_content=existing_memories)),
-                {"role": "user", "content": last_message.content},
-            ]
-        )
+            if decision.should_write:
+                for memory in decision.memories:
+                    if memory.is_new and memory.text.strip():
+                        store.put(
+                            namespace,
+                            str(uuid.uuid4()),
+                            {"data": memory.text.strip()},
+                        )
 
-        # 4. Store new memories if found
-        if decision.should_write:
-            for mem in decision.memories:
-                if mem.is_new and mem.text.strip():
-                    # We use uuid to generate unique keys for each memory item
-                    store.put(namespace, str(uuid.uuid4()), {"data": mem.text.strip()})
-
-        return {}
+        return {"ltm_processed_human_count": len(human_messages)}
 
     @traceable(tags=["chat"])
-    def chat_node(state: ChatState, config : RunnableConfig, *, store: BaseStore) -> dict:
+    def chat_node(state: ChatState, config: RunnableConfig, *, store: BaseStore) -> dict:
         """
         The main chatbot node. It analyzes the conversation state and decides 
         whether to generate a text response or call a tool.
@@ -124,12 +135,11 @@ def create_graph_nodes(
         Returns:
             dict: A dictionary containing the new message to append to the state.
         """
-        thread_id = None
-        user_id = "default"
-
-        if config:
-            thread_id = config.get("configurable", {}).get("thread_id")
-            user_id = config.get("configurable", {}).get("user_id", "default")
+        configurable = config.get("configurable", {})
+        user_id = configurable.get("user_id")
+        thread_id = configurable.get("thread_id")
+        if not user_id or not thread_id:
+            raise ValueError("Both user_id and thread_id are required.")
 
         # 1. Fetch Long Term Memory
         items = store.search(("user", user_id, "details"))
@@ -148,74 +158,103 @@ def create_graph_nodes(
         else:
             files_context = "No PDF documents uploaded yet."
 
-        # 3. Inject the Summary into the System Message
-        summary = state.get("summary", "")
-        if summary:
-            summary_context = f"Summary of past conversation: {summary}"
-        else:
-            summary_context = "No previous summary."
+        latest_human_index = next(
+            (
+                index
+                for index in range(len(state["messages"]) - 1, -1, -1)
+                if isinstance(state["messages"][index], HumanMessage)
+            ),
+            None,
+        )
+        if latest_human_index is None:
+            raise ValueError("Chat state must contain a human message.")
+
+        latest_human = state["messages"][latest_human_index]
+        current_turn_messages = state["messages"][latest_human_index:]
+        history_messages = _load_history_messages(
+            conversation_history_repository=conversation_history_repository,
+            embeddings=embeddings,
+            user_id=str(user_id),
+            thread_id=str(thread_id),
+            query=str(latest_human.content),
+        )
 
         # 4. Construct the System Message with dynamic context
         system_message = SystemMessage(
             content=SYSTEM_PROMPT_TEMPLATE.format(
                 user_details_content=user_details_content,
-                summary_context=summary_context,
+                summary_context=(
+                    "Relevant conversation history is supplied below."
+                    if history_messages
+                    else "No relevant previous conversation history."
+                ),
                 files_context=files_context,
                 thread_id=thread_id
             )
         )
 
-        # 5. Trim messages to manage token usage
-        trimmed_messages = trim_messages(
-            state["messages"][-SHORT_TERM_MEMORY_LIMIT:],
-            strategy="last",
-            token_counter=count_tokens_approximately,
-            max_tokens=MAX_TOKENS
-        )
-
-        # 3. Prepend system message to history and invoke LLM
-        messages = [system_message, *trimmed_messages]
+        messages = [system_message, *history_messages, *current_turn_messages]
         response = llm_with_tools.invoke(messages, config=config)
-        return {"messages": [response]}
-
-    @traceable(tags=["summarize_conversation", str(SHORT_TERM_MEMORY_LIMIT)])
-    def summarize_conversation(state: ChatState) -> dict:
-        """
-        Summarizes the conversation history and reduce old messages from the state.
-
-        Remove the oldest messages if the history exceeds a certain length.
-        This helps keep the DATABASE size manageable.
-
-        :param state: Description
-        :type state: ChatState
-        :return: Description
-        :rtype: dict
-        """
-        existing_summary = state.get("summary", "")
-
-        # Construct the prompt for the summarization model
-        if existing_summary:
-            prompt = (
-                f"""
-            This is summary of the conversation to date: 
-
-            {existing_summary}
-
-            Extend the summary by taking into account the new messages above.
-            """
+        if not response.tool_calls and response.content:
+            conversation_history_repository.upsert_turn(
+                user_id=str(user_id),
+                thread_id=str(thread_id),
+                turn_id=str(latest_human.id or uuid.uuid4()),
+                user_content=str(latest_human.content),
+                assistant_content=_message_content(response),
+                embedding=embeddings.embed_query(
+                    f"User: {latest_human.content}\nAssistant: {_message_content(response)}"
+                ),
             )
-        else:
-            prompt = "Create a summary of the above conversation:"
+        return {"messages": [response]}
+    return long_term_memory, chat_node
 
-        # We send the messages history except the last N messages + the instruction to summarize
-        messages_for_summary = state["messages"][:-SHORT_TERM_MEMORY_LIMIT]
-        messages_for_summary.append(SystemMessage(content=prompt))
 
-        # Only invoke if there is actually something to summarize other than the prompt
-        if len(messages_for_summary) > 1:
-            response = llm.invoke(messages_for_summary)
-            return {"summary": response.content}
+def _message_content(message: AIMessage) -> str:
+    """Convert provider content blocks into text for history indexing."""
+    if isinstance(message.content, str):
+        return message.content
+    return "\n".join(
+        block.get("text", "")
+        for block in message.content
+        if isinstance(block, dict) and block.get("text")
+    )
 
-        return {}
 
-    return remember_node, chat_node, summarize_conversation
+def _load_history_messages(
+    *,
+    conversation_history_repository,
+    embeddings,
+    user_id: str,
+    thread_id: str,
+    query: str,
+) -> list[BaseMessage]:
+    """Return five recent turns plus additional semantically related turns."""
+    recent = conversation_history_repository.recent_turns(
+        user_id=user_id,
+        thread_id=thread_id,
+        limit=RECENT_HISTORY_TURNS,
+    )
+    semantic = conversation_history_repository.search_turns(
+        query_embedding=embeddings.embed_query(query),
+        user_id=user_id,
+        thread_id=thread_id,
+        match_count=LONG_CONTEXT_MATCH_LIMIT,
+    )
+
+    turns = {turn["turn_id"]: turn for turn in recent}
+    turns.update({turn["turn_id"]: turn for turn in semantic})
+    ordered_turns = sorted(
+        turns.values(),
+        key=lambda turn: turn.get("created_at", ""),
+    )
+
+    history_messages: list[BaseMessage] = []
+    for turn in ordered_turns:
+        history_messages.extend(
+            [
+                HumanMessage(content=turn["user_content"]),
+                AIMessage(content=turn["assistant_content"]),
+            ]
+        )
+    return history_messages

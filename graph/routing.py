@@ -2,19 +2,23 @@
 Routing logic for the LangGraph AI chatbot.
 """
 from langsmith import traceable
-from config.settings import (
-    SHORT_TERM_MEMORY_LIMIT
-)
 from graph.state import ChatState
+from config.settings import LONG_TERM_MEMORY_INTERVAL
+from langchain_core.messages import HumanMessage
 
-@traceable(tags=["should_summarize", str(SHORT_TERM_MEMORY_LIMIT)])
-def should_summarize(state: ChatState) -> str:
+@traceable(tags=["is_long_chat", str(LONG_TERM_MEMORY_INTERVAL)])
+def is_long_chat(state: ChatState) -> str:
     """
-    Determines the next step: Tool? Summarize? or End?
+    Determines the next step: chat? or check for Long Term Memory?
+    For Every nth Human Message
     """
     messages = state["messages"]
 
-    # If the conversation is getting long (e.g., > N messages), route to summarizer
-    if len(messages) > SHORT_TERM_MEMORY_LIMIT:
-        return "summarize_node"
-    return "remember_node"
+    count = 0
+    for message in messages:
+        if isinstance(message, HumanMessage):
+            count += 1
+
+    if count % LONG_TERM_MEMORY_INTERVAL == 0:
+        return "long_chat"
+    return "short_chat"

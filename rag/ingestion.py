@@ -5,6 +5,8 @@ import os
 import tempfile
 import uuid
 
+from config.settings import TEXT_SPLITTER_CHUNK_SIZE, TEXT_SPLITTER_OVERLAP
+
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PyPDFLoader
 
@@ -62,8 +64,8 @@ class RAGIngestion:
 
             # Split into chunks
             chunks = RecursiveCharacterTextSplitter(
-                chunk_size=1000,
-                chunk_overlap=200,
+                chunk_size=int(TEXT_SPLITTER_CHUNK_SIZE),
+                chunk_overlap=int(TEXT_SPLITTER_OVERLAP),
                 separators=["\n\n", "\n", " ", ""],
             ).split_documents(docs)
 

@@ -5,13 +5,17 @@ PostgreSQL, pgvector, chat history, checkpoints, and long-term user memory.
 """
 from __future__ import annotations
 
-from llm.factory import create_chat_llm, create_memory_llm
+from llm.chat import create_chat_llm
+from llm.factory import create_memory_llm
 from llm.embeddings import create_embeddings
 
-from db.connections import create_connection_pool
 from db.supabase import create_supabase_client
 from db.repositories.document_repository import DocumentRepository
 from db.repositories.vector_repository import VectorRepository
+from db.repositories.conversation_history_repository import (
+    ConversationHistoryRepository,
+)
+from db.connections import create_connection_pool
 from db.langgraph import (
     setup_langgraph_database,
     create_checkpointer,
@@ -23,30 +27,19 @@ from rag.retrieval import RAGRetriever
 from rag.ingestion import RAGIngestion
 from rag.service import RAGService
 
-from clients.weather_api import WeatherAPIClient
-from clients.web_search import WebSearchClient
-from clients.alpha_vantage import AlphaVantageClient
-
-from services.weather_service import WeatherService
-from services.stock_service import StockService
-from services.search_service import SearchService
-
 from tools.weather import create_weather_tool
 from tools.stocks import create_stock_price_tool
 from tools.web_search import create_web_search_tool
-from tools.registry import create_tool_registry
+from tools_registry import create_tool_registry
 from tools.purchase import purchase_stock
 from tools.calculator import calculator
 from tools.rag import create_rag_tool
 
-from graph.memory import create_memory_extractor
 from graph.builder import build_chatbot
 
-from config.settings import DATABASE_URL
 
 
-
-# ==================== Initialize LLMs and Load environment variables ====================
+# ==================== Initialize LLMs and DataBase Client ====================
 llm = create_chat_llm()
 memory_llm = create_memory_llm()
 embeddings = create_embeddings()
@@ -54,21 +47,71 @@ supabase = create_supabase_client()
 
 
 
-# ==================== PDF retriever store (per thread) ====================
+# ==================== RAG Store ====================
+# Retrieves document metadata from Supabase
 document_repository = DocumentRepository(supabase)
+# Retrieves document chunks from Supabase
 vector_repository = VectorRepository(supabase)
-rag_retriever = RAGRetriever(
-    embeddings=embeddings,
-    vector_repository=vector_repository,
-)
-rag_ingestion = RAGIngestion(
-    supabase_client=supabase,
-    embeddings=embeddings,
-)
+conversation_history_repository = ConversationHistoryRepository(supabase)
+
 rag_service = RAGService(
-    ingestion=rag_ingestion,
-    retriever=rag_retriever,
+    # upload document, split into chunks, create embeddings, store in Supabase
+    ingestion=RAGIngestion(
+        supabase_client=supabase,
+        embeddings=embeddings
+    ),
+    # retrieve document chunks from Supabase for a query
+    retriever=RAGRetriever(
+        embeddings=embeddings,
+        vector_repository=vector_repository
+    )
 )
+
+
+
+# ==================== Tools  Registory ====================
+search = create_web_search_tool()
+get_stock_price = create_stock_price_tool()
+get_weather_data = create_weather_tool()
+rag_tool = create_rag_tool(rag_service)
+
+# Bind tools to the LLM so it knows their schemas
+tools = create_tool_registry(
+    search=search,
+    get_stock_price=get_stock_price,
+    get_weather_data=get_weather_data,
+    rag_tool=rag_tool,
+    purchase_stock=purchase_stock,
+    calculator=calculator,
+)
+
+
+
+# ==================== DB Setup & Compilation ====================
+
+# 1. Setup PostgresSaver (Checkpointer) and PostgresStore (Long Term Memory)
+setup_langgraph_database()
+
+# 2. Initialize ONE ConnectionPool to share between Saver and Store
+pool = create_connection_pool()
+checkpointer = create_checkpointer(pool)
+postgres_store = create_store(pool)
+
+# 3. Build the Chatbot
+chatbot = build_chatbot(
+    llm=llm,
+    tools=tools,
+    store=postgres_store,
+    checkpointer=checkpointer,
+    memory_llm=memory_llm,
+    document_repository=document_repository,
+    embeddings=embeddings,
+    conversation_history_repository=conversation_history_repository,
+)
+
+
+
+# ==================== Helper ====================
 
 def ingest_pdf(file_bytes: bytes, thread_id: str, filename: str) -> dict:
     """
@@ -89,72 +132,6 @@ def ingest_pdf(file_bytes: bytes, thread_id: str, filename: str) -> dict:
         thread_id=thread_id,
         filename=filename,
     )
-
-
-
-# ==================== Tools ====================
-search_client = WebSearchClient()
-search_service = SearchService(search_client)
-search = create_web_search_tool(search_service)
-
-stock_client = AlphaVantageClient()
-stock_service = StockService(stock_client)
-get_stock_price = create_stock_price_tool(stock_service)
-
-weather_client = WeatherAPIClient()
-weather_service = WeatherService(weather_client)
-get_weather_data = create_weather_tool(weather_service)
-
-rag_tool = create_rag_tool(rag_service)
-
-# Bind tools to the LLM so it knows their schemas
-tools = create_tool_registry(
-    search=search,
-    calculator=calculator,
-    get_stock_price=get_stock_price,
-    purchase_stock=purchase_stock,
-    get_weather_data=get_weather_data,
-    rag_tool=rag_tool,
-)
-memory_extractor = create_memory_extractor(memory_llm)
-
-
-
-# ==================== DB Setup & Compilation ====================
-
-# 1. Setup PostgresSaver (Checkpointer)
-setup_langgraph_database(DATABASE_URL)
-
-# 2. Setup PostgresStore (Long Term Memory)
-# We create ONE connection pool to share between Saver and Store
-pool = create_connection_pool()
-
-# 3. Initialize Connections
-checkpointer = create_checkpointer(pool)
-
-# 4. Build the Chatbot
-chatbot = build_chatbot(
-    llm=llm,
-    tools=tools,
-    checkpointer=checkpointer,
-    store=create_store(pool),
-    memory_extractor=memory_extractor,
-    document_repository=document_repository,
-)
-
-
-
-# ==================== Helper ====================
-def get_thread_file_names(thread_id: str) -> list[str]:
-    """_summary_
-
-    Args:
-        thread_id (str): _description_
-
-    Returns:
-        list[str]: _description_
-    """
-    return document_repository.get_thread_file_names(thread_id)
 
 def get_thread_metadata(thread_id: str) -> dict:
     """_summary_

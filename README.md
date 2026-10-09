@@ -177,136 +177,159 @@ as $$
 $$;
 ```
 
-3. Create the documents bucket storage
+## Setup order after a database reset
+
+Follow these steps in order after deleting the Supabase tables and storage
+objects. Run each SQL block in the Supabase SQL Editor.
+
+### Step 1: Create document tables
+
+Run the `documents` and `document_chunks` table migration above.
+
+### Step 2: Create the document vector search function and index
+
+Run the `document_chunks_embedding_idx` index and
+`match_document_chunks(...)` function migration above.
+
+### Step 3: Create semantic conversation history
+
+The LangGraph checkpointer remains the source of truth for the complete state of
+each thread. A separate Supabase table stores one embedded record for each
+completed user/assistant turn. It is scoped by both `user_id` and `thread_id`.
+The application retrieves the five newest turns on every request and adds
+semantic matches only for long-context recall.
+
+Run this migration in Supabase SQL Editor:
+
+```sql
+create table conversation_turns (
+    id bigint generated always as identity primary key,
+    user_id text not null,
+    thread_id text not null,
+    turn_id text not null,
+    user_content text not null,
+    assistant_content text not null,
+    content text not null,
+    embedding vector(384) not null,
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now(),
+    constraint conversation_turns_user_thread_turn_key
+        unique (user_id, thread_id, turn_id)
+);
+
+create index conversation_turns_scope_created_idx
+on conversation_turns (user_id, thread_id, created_at desc);
+
+create index conversation_turns_embedding_idx
+on conversation_turns
+using hnsw (embedding vector_cosine_ops);
+
+create or replace function match_conversation_turns(
+    query_embedding vector(384),
+    match_user_id text,
+    match_thread_id text,
+    match_count int default 5
+)
+returns table (
+    turn_id text,
+    user_content text,
+    assistant_content text,
+    created_at timestamptz,
+    similarity float
+)
+language sql
+stable
+as $$
+    select
+        ct.turn_id,
+        ct.user_content,
+        ct.assistant_content,
+        ct.created_at,
+        1 - (ct.embedding <=> query_embedding) as similarity
+    from conversation_turns ct
+    where ct.user_id = match_user_id
+      and ct.thread_id = match_thread_id
+    order by ct.embedding <=> query_embedding
+    limit match_count;
+$$;
+```
+
+No existing `documents`, `document_chunks`, LangGraph checkpoint, or
+LangGraph store table needs to be altered for this change. The complete
+conversation remains in the checkpointer; `conversation_turns` is an additional
+semantic index.
+
+The application creates LangGraph checkpoint and store tables automatically
+when `backend.py` starts. Do not manually create those tables.
+
+## Optional semantic-history maintenance
+
+To update an indexed turn manually:
+
+```sql
+update conversation_turns
+set user_content = 'Updated user text',
+    assistant_content = 'Updated assistant text',
+    content = 'User: Updated user text
+Assistant: Updated assistant text',
+    updated_at = now()
+where user_id = 'user_123'
+  and thread_id = '<thread-id>'
+  and turn_id = '<turn-id>';
+```
+
+If message text is changed manually, regenerate its `embedding` with the same
+`all-MiniLM-L6-v2` model before relying on semantic search. The application
+normally performs this update through an upsert when a completed turn is
+indexed.
+
+To delete one turn, all turns for one thread, or all history for one user:
+
+```sql
+delete from conversation_turns
+where user_id = 'user_123'
+  and thread_id = '<thread-id>'
+  and turn_id = '<turn-id>';
+
+delete from conversation_turns
+where user_id = 'user_123'
+  and thread_id = '<thread-id>';
+
+delete from conversation_turns
+where user_id = 'user_123';
+```
+
+### Step 4: Create the document storage bucket
+
 Supabase Dashboard → Storage → New bucket → documents
 
-4. Create a conda environment
+### Step 5: Install dependencies when needed
+
 ```shell
 conda create --name chatbot python=3.14.8
 conda activate chatbot
-```
-
-5. Install dependencies
-```shell
 pip install -r requirements.txt
 ```
 
-6. Run the frontend using streamlit
+### Step 6: Start the application
+
+From the project directory, run:
+
 ```shell
 streamlit run frontend.py
 ```
 
-7. Visit LangSmith to track and visualize your LangChain applications:
+On startup, the application will automatically initialize the LangGraph
+checkpoint and long-term-memory store tables.
+
+### Step 7: Visit LangSmith
+
 https://smith.langchain.com/
 
 ## Features to Add in the Future
-1. Use below platform's api key for Low-frequency background tasks such as summarization, labeling/classification chat, metadata generation, extracting entities, rewriting, tagging, etc.
-- Google Gemini API
-- Groq
-2. Image and audio models: multimodal AI
+1. Image and audio models: multimodal AI
 check if there is max terns or not to prevent infinte loop if the model is not able to generate a response. If the model reaches the maximum number of turns, it should stop generating responses and return an appropriate message to the user.
 orchestration
-3. find do we can add bash tool in python code to run bash commands and get the output. This can be useful for automating tasks, running scripts, and interacting with the system.
-4. Self-Modifying Coding Agent
-5. Add user authentication and authorization
-6. Dockerize the application
-7. 
-```
-app/
-│
-├── config/
-│   └── settings.py
-│
-├── models/
-│   ├── state.py
-│   └── schemas.py
-│
-├── llm/
-│   ├── factory.py
-│   └── embeddings.py
-│
-├── db/
-│   ├── postgres.py
-│   ├── repositories/
-│   │   ├── conversations.py
-│   │   ├── messages.py
-│   │   ├── memories.py
-│   │   └── documents.py
-│   └── migrations/
-│
-├── memory/
-│   ├── service.py
-│   ├── semantic.py
-│   └── long_term.py
-│
-├── rag/
-│   ├── ingestion.py
-│   ├── retrieval.py
-│   └── service.py
-│
-├── tools/
-│   ├── web_search.py
-│   ├── calculator.py
-│   ├── stocks.py
-│   ├── weather.py
-│   ├── purchase.py
-│   ├── rag.py
-│   └── registry.py
-│
-├── graph/
-│   ├── nodes.py
-│   ├── routing.py
-│   └── builder.py
-│
-└── frontend/
-    └── streamlit_app.py
-```
-8. dependency injection: Currently modules directly use globals that is created by the backend at import time. This makes testing difficult. run weather tool using fake API etc.
-9. conversation summarization
-10. message deletion
-11. user identity
-12. database/application separation
-13. Error correction for LangSmith feedback, Summarization and Web search for 
-
-
-Now i want you to create an detailed design to implement LLM, database, tools and RAG seperation towards modularity. Once it willl done i will do the rest of modularity and other features and improvement. But I will do this in new chat session with you. So, you just draft the step by step design to implement modularity in the current codebase. Also ask the chatbot to perform taks one by one or step by step.
-Make a package such that Each tool should have one responsibility.
-```
-tools/
-    __init__.py
-    web_search.py
-    calculator.py
-    stocks.py
-    weather.py
-    rag.py
-    purchase.py
-    registry.py
-```
-Also, i want tools should not directly own infrastructure. So, that i can replace without rewriting the LangGraph workflow.
-```
-WeatherTool
-   ↓
-WeatherService
-   ↓
-Weather API client
-```
-```
-rag_tool
-   ↓
-RAGService
-   ↓
-VectorRepository
-   ↓
-PostgreSQL
-```
-3. I would also introduce a tool registry having something conceptually like this inside tools/registry.py
-```
-ALL_TOOLS = [
-    web_search_tool,
-    calculator_tool,
-    stock_price_tool,
-    purchase_stock_tool,
-    weather_tool,
-    rag_tool,
-]
-```
+2. find do we can add bash tool in python code to run bash commands and get the output. This can be useful for automating tasks, running scripts, and interacting with the system.
+3. Add user authentication and authorization
+4. Dockerize the application

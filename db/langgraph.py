@@ -6,6 +6,26 @@ import psycopg
 from langgraph.checkpoint.postgres import PostgresSaver
 from langgraph.store.postgres import PostgresStore
 
+from config.settings import DATABASE_URL
+
+def setup_langgraph_database() -> None:
+    """_summary_
+
+    Args:
+        database_url (str): _description_
+    """
+    try:
+        # Run migrations with a dedicated auto-commit connection as PostgresSaver.setup()
+        # creates indexes concurrently, which CANNOT run in a transaction block.
+        with psycopg.connect(DATABASE_URL, autocommit=True) as setup_conn:
+            PostgresSaver(setup_conn).setup()
+
+        with PostgresStore.from_conn_string(DATABASE_URL) as storesetup:
+            storesetup.setup()
+
+    except psycopg.Error as e:
+        print(f"Warning during DB setup (indexes might already exist): {e}")
+
 def create_checkpointer(pool):
     """_summary_
 
@@ -29,27 +49,6 @@ def create_store(pool):
         _type_: _description_
     """
     return PostgresStore(pool)
-
-def setup_langgraph_database(database_url: str) -> None:
-    """_summary_
-
-    Args:
-        database_url (str): _description_
-    """
-    try:
-        # Run migrations with a dedicated auto-commit connection as PostgresSaver.setup()
-        # creates indexes concurrently, which CANNOT run in a transaction block.
-        with psycopg.connect(
-            database_url,
-            autocommit=True,
-        ) as setup_conn:
-            PostgresSaver(setup_conn).setup()
-
-        with PostgresStore.from_conn_string(database_url) as storesetup:
-            storesetup.setup()
-
-    except psycopg.Error as e:
-        print(f"Warning during DB setup (indexes might already exist): {e}")
 
 def get_all_thread_ids(checkpointer) -> list:
     """

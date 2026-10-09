@@ -1,12 +1,13 @@
 """
 Stock Service for fetching stock prices.
 """
+from clients.alpha_vantage import AlphaVantageClient
 
 class StockService:
     """_summary_
     """
-    def __init__(self, client):
-        self.client = client
+    def __init__(self):
+        self.client = AlphaVantageClient()
 
     def get_stock_price(self, symbol: str) -> dict:
         """_summary_

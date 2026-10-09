@@ -1,11 +1,13 @@
 """
 Weather Service for fetching current weather information.
 """
+from clients.weather_api import WeatherAPIClient
+
 class WeatherService:
     """_summary_
     """
-    def __init__(self, client):
-        self.client = client
+    def __init__(self):
+        self.client = WeatherAPIClient()
 
     def get_current_weather(self, city: str) -> dict:
         """_summary_

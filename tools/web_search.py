@@ -2,17 +2,15 @@
 Web search tool for performing searches on the web.
 """
 from langchain_core.tools import tool
+from services.search_service import SearchService
 
-
-def create_web_search_tool(search_service):
+def create_web_search_tool():
     """_summary_
-
-    Args:
-        search_service (_type_): _description_
 
     Returns:
         _type_: _description_
     """
+    search_service = SearchService()
     @tool
     def search(query: str) -> str:
         """Search the web using DuckDuckGo."""
