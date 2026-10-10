@@ -2,12 +2,13 @@
 from __future__ import annotations
 
 import ast
-import os
 import shlex
 import subprocess
 from pathlib import Path
 
 from langchain_core.tools import tool
+
+from config.settings import AGENT_WORKSPACE, SANDBOX_COMMAND_TIMEOUT_SECONDS
 
 
 _READ_ONLY_COMMANDS = {
@@ -32,7 +33,7 @@ _FORBIDDEN_ARGUMENTS = {"-delete", "-exec", "-execdir", "-ok", "-okdir"}
 
 def _workspace_root() -> Path:
     """Return the resolved workspace root used for sandbox validation."""
-    return Path(os.environ.get("AGENT_WORKSPACE", "workspace")).resolve()
+    return Path(AGENT_WORKSPACE).resolve()
 
 
 def _within_workspace(path: Path, workspace: Path) -> bool:
@@ -94,7 +95,7 @@ def shell_tool(command: str) -> str:
             cwd=workspace,
             capture_output=True,
             text=True,
-            timeout=30,
+            timeout=SANDBOX_COMMAND_TIMEOUT_SECONDS,
             check=False,
         )
     except (OSError, subprocess.TimeoutExpired) as exc:

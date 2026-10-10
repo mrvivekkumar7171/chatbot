@@ -11,12 +11,12 @@ class SearchService:
         self.client = WebSearchClient()
 
     def search(self, query: str) -> str:
-        """_summary_
+        """Search the web for information matching a user query.
 
         Args:
-            query (str): _description_
+            query: Search terms to send to the web search client.
 
         Returns:
-            str: _description_
+            The search provider's textual result.
         """
         return self.client.search(query)

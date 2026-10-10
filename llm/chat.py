@@ -3,13 +3,12 @@ LLM Factory for creating language model instances.
 """
 from langchain_groq import ChatGroq
 
-def create_chat_llm():
-    """_summary_
+from config.settings import CHAT_MODEL, CHAT_TEMPERATURE
 
-    Returns:
-        _type_: _description_
-    """
+
+def create_chat_llm():
+    """Create the configured Groq chat model."""
     return ChatGroq(
-        model="openai/gpt-oss-20b",
-        temperature=1,
+        model=CHAT_MODEL,
+        temperature=CHAT_TEMPERATURE,
     )

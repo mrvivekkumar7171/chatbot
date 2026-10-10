@@ -18,15 +18,15 @@ class RAGService:
         thread_id: str,
         filename: str,
     ) -> dict:
-        """_summary_
+        """Delegate PDF ingestion to the configured ingestion component.
 
         Args:
-            file_bytes (bytes): _description_
-            thread_id (str): _description_
-            filename (str): _description_
+            file_bytes: Raw PDF bytes received from the uploader.
+            thread_id: Conversation thread that owns the document.
+            filename: Original filename used for storage and metadata.
 
         Returns:
-            dict: _description_
+            A summary of the document ingestion operation.
         """
         return self.ingestion.ingest_pdf(
             file_bytes=file_bytes,
@@ -39,14 +39,14 @@ class RAGService:
         query: str,
         thread_id: str,
     ) -> dict:
-        """_summary_
+        """Retrieve document context and source filenames for a query.
 
         Args:
-            query (str): _description_
-            thread_id (str): _description_
+            query: Natural-language question about uploaded documents.
+            thread_id: Conversation thread used to scope document retrieval.
 
         Returns:
-            dict: _description_
+            A dictionary containing the query, matching context, and sources.
         """
         if not thread_id:
             return {

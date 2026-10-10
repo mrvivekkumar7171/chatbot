@@ -11,12 +11,12 @@ class WeatherService:
         self.client = WeatherAPIClient()
 
     def get_current_weather(self, city: str) -> dict:
-        """_summary_
+        """Fetch current weather conditions for a city.
 
         Args:
-            city (str): _description_
+            city: City name accepted by the Weatherstack API.
 
         Returns:
-            dict: _description_
+            The weather response returned by Weatherstack.
         """
         return self.client.get_current_weather(city)

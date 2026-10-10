@@ -63,16 +63,18 @@ def create_graph_nodes(
     embeddings,
     conversation_history_repository,
 ):
-    """_summary_
+    """Create the long-term-memory and chat nodes used by the graph.
 
     Args:
-        llm (_type_): _description_
-        llm_with_tools (_type_): _description_
-        memory_llm (_type_): _description_
-        document_repository (_type_): _description_
+        llm: Base chat model used by the application.
+        llm_with_tools: Chat model bound to the registered tools.
+        memory_llm: Model used to extract durable user memories.
+        document_repository: Repository for uploaded-document metadata.
+        embeddings: Embedding client for document and conversation retrieval.
+        conversation_history_repository: Repository for semantic chat history.
 
     Returns:
-        _type_: _description_
+        A tuple containing the long-term-memory node and chat node callables.
     """
 
     memory_llm = create_memory_extractor(memory_llm)

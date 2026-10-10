@@ -137,20 +137,9 @@ def ingest_pdf(file_bytes: bytes, thread_id: str, filename: str) -> dict:
     )
 
 def get_thread_metadata(thread_id: str) -> dict:
-    """_summary_
-
-    Args:
-        thread_id (str): _description_
-
-    Returns:
-        dict: _description_
-    """
+    """Return uploaded-document metadata for a conversation thread."""
     return document_repository.get_thread_metadata(thread_id)
 
 def retrieve_all_threads() -> list:
-    """_summary_
-
-    Returns:
-        list: _description_
-    """
+    """Return all conversation thread IDs stored by the checkpointer."""
     return get_all_thread_ids(checkpointer)

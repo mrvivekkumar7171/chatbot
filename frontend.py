@@ -13,10 +13,19 @@ from langsmith import Client
 import streamlit as st
 
 from backend import chatbot, retrieve_all_threads, get_thread_metadata, ingest_pdf
-from config.settings import MAX_ITERATIONS
-
-# Replace this with the authenticated user's stable identifier when auth is added.
-CURRENT_USER_ID = "user_123"
+from config.settings import (
+    APP_LAYOUT,
+    APP_PAGE_ICON,
+    APP_PAGE_TITLE,
+    APP_TITLE,
+    CHAT_MODEL,
+    CURRENT_USER_ID,
+    LANGGRAPH_PARSER,
+    LANGGRAPH_RUN_NAME,
+    LANGGRAPH_TAGS,
+    MAX_ITERATIONS,
+    PDF_FILE_EXTENSION,
+)
 
 # =========================== Utilities ===========================
 def generate_thread_id()  -> uuid.UUID:
@@ -129,7 +138,7 @@ selected_thread = None
 
 # Base configuration for LangGraph execution
 CONFIG = {
-    "run_name": "Self_Mod_Coding_Agent",
+    "run_name": LANGGRAPH_RUN_NAME,
     "recursion_limit": MAX_ITERATIONS,
     "configurable": {
         "thread_id": THREAD_KEY,
@@ -138,15 +147,18 @@ CONFIG = {
     "metadata": {
         "thread_id": THREAD_KEY,
         "user_id": CURRENT_USER_ID,
-        "model": "openai/gpt-oss-20b",
-        "temperature": 0.7,
-        "parser": "StrOutputParser"
+        "model": CHAT_MODEL,
+        "parser": LANGGRAPH_PARSER
     },
-    "tags": ["llm app", "report_generation", "summarization"]
+    "tags": LANGGRAPH_TAGS
 }
 
-st.set_page_config(layout="wide", page_title="TheSoftMax Chat", page_icon="💬")
-st.title("TheSoftMax")
+st.set_page_config(
+    layout=APP_LAYOUT,
+    page_title=APP_PAGE_TITLE,
+    page_icon=APP_PAGE_ICON,
+)
+st.title(APP_TITLE)
 # ============================ Sidebar ============================
 # Button to start a fresh conversation
 if st.sidebar.button("New Chat", use_container_width=True):
@@ -166,7 +178,7 @@ else:
 # Document upload section
 uploaded_pdf = st.sidebar.file_uploader(
     " ",
-    type=["pdf"],
+    type=[PDF_FILE_EXTENSION],
     key=f"uploader_{st.session_state['file_uploader_key']}"
     )
 

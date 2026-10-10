@@ -5,11 +5,7 @@ from langchain_core.tools import tool
 from services.weather_service import WeatherService
 
 def create_weather_tool():
-    """_summary_
-
-    Returns:
-        _type_: _description_
-    """
+    """Create the LangChain tool that retrieves current weather."""
     weather_service = WeatherService()
     @tool
     def get_weather_data(city: str) -> dict:

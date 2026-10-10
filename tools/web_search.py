@@ -5,11 +5,7 @@ from langchain_core.tools import tool
 from services.search_service import SearchService
 
 def create_web_search_tool():
-    """_summary_
-
-    Returns:
-        _type_: _description_
-    """
+    """Create the LangChain tool that performs web searches."""
     search_service = SearchService()
     @tool
     def search(query: str) -> str:

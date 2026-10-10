@@ -6,13 +6,13 @@ from langchain_core.tools import tool
 
 
 def create_rag_tool(rag_service):
-    """_summary_
+    """Create the tool that searches uploaded PDF content.
 
     Args:
-        rag_service (_type_): _description_
+        rag_service: Service that performs document retrieval.
 
     Returns:
-        _type_: _description_
+        A LangChain tool callable for document-context retrieval.
     """
     @tool
     def rag_tool(

@@ -11,12 +11,12 @@ class StockService:
         self.client = AlphaVantageClient()
 
     def get_stock_price(self, symbol: str) -> dict:
-        """_summary_
+        """Fetch the latest quote for a stock symbol.
 
         Args:
-            symbol (str): _description_
+            symbol: Exchange ticker symbol such as ``AAPL``.
 
         Returns:
-            dict: _description_
+            The stock quote response returned by Alpha Vantage.
         """
         return self.client.get_global_quote(symbol)

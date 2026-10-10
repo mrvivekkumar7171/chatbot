@@ -11,20 +11,20 @@ def create_tool_registry(
     shell_tool,
     safe_write_code,
 ):
-    """_summary_
+    """Build the ordered list of tools available to the chat model.
 
     Args:
-        search (_type_): _description_
-        calculator (_type_): _description_
-        get_stock_price (_type_): _description_
-        purchase_stock (_type_): _description_
-        get_weather_data (_type_): _description_
-        rag_tool (_type_): _description_
-        shell_tool (_type_): Restricted read-only terminal tool.
-        safe_write_code (_type_): AST-validated workspace file writer.
+        search: Web-search tool.
+        calculator: Arithmetic calculator tool.
+        get_stock_price: Stock quote tool.
+        purchase_stock: Human-confirmed stock purchase tool.
+        get_weather_data: Current weather tool.
+        rag_tool: Uploaded-document retrieval tool.
+        shell_tool: Restricted read-only terminal tool.
+        safe_write_code: AST-validated workspace file writer.
 
     Returns:
-        _type_: _description_
+        Tools in the order they should be exposed to the chat model.
     """
     return [
         search,

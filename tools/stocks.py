@@ -5,11 +5,7 @@ from langchain_core.tools import tool
 from services.stock_service import StockService
 
 def create_stock_price_tool():
-    """_summary_
-
-    Returns:
-        _type_: _description_
-    """
+    """Create the LangChain tool that retrieves stock quotes."""
     stock_service = StockService()
 
     @tool

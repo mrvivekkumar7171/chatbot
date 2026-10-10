@@ -9,11 +9,7 @@ from langgraph.store.postgres import PostgresStore
 from config.settings import DATABASE_URL
 
 def setup_langgraph_database() -> None:
-    """_summary_
-
-    Args:
-        database_url (str): _description_
-    """
+    """Create or update the LangGraph checkpoint and store tables."""
     try:
         # Run migrations with a dedicated auto-commit connection as PostgresSaver.setup()
         # creates indexes concurrently, which CANNOT run in a transaction block.
@@ -27,27 +23,13 @@ def setup_langgraph_database() -> None:
         print(f"Warning during DB setup (indexes might already exist): {e}")
 
 def create_checkpointer(pool):
-    """_summary_
-
-    Args:
-        pool (_type_): _description_
-
-    Returns:
-        _type_: _description_
-    """
+    """Create a Postgres-backed LangGraph checkpoint saver."""
     # Initialize the persistent connection pool. We do NOT use 'with ConnectionPool(...) as pool:'
     # because the pool needs to remain open for the lifetime of the application/module.
     return PostgresSaver(pool)
 
 def create_store(pool):
-    """_summary_
-
-    Args:
-        pool (_type_): _description_
-
-    Returns:
-        _type_: _description_
-    """
+    """Create a Postgres-backed LangGraph long-term memory store."""
     return PostgresStore(pool)
 
 def get_all_thread_ids(checkpointer) -> list:

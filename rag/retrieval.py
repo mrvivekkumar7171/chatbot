@@ -15,15 +15,15 @@ class RAGRetriever:
         thread_id: str,
         limit: int = 4,
     ):
-        """_summary_
+        """Retrieve semantically similar document chunks.
 
         Args:
-            query (str): _description_
-            thread_id (str): _description_
-            limit (int, optional): _description_. Defaults to 4.
+            query: Natural-language query to embed and search.
+            thread_id: Conversation thread used to scope the search.
+            limit: Maximum number of matching chunks to return.
 
         Returns:
-            _type_: _description_
+            A list of matching document chunk records.
         """
         if not thread_id:
             return []

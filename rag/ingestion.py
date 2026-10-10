@@ -25,18 +25,19 @@ class RAGIngestion:
         thread_id: str,
         filename: str,
     ) -> dict:
-        """_summary_
+        """Extract, embed, and store the contents of a PDF document.
 
         Args:
-            file_bytes (bytes): _description_
-            thread_id (str): _description_
-            filename (str): _description_
+            file_bytes: Raw PDF bytes received from the uploader.
+            thread_id: Conversation thread that owns the document.
+            filename: Original filename used for storage and metadata.
 
         Raises:
-            ValueError: _description_
+            ValueError: If no file bytes are supplied.
 
         Returns:
-            dict: _description_
+            A summary containing the filename, page count, and chunk count,
+            or an error summary when PDF processing fails.
         """
         if not file_bytes:
             raise ValueError("No bytes received for ingestion.")

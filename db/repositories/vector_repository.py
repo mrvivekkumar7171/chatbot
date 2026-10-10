@@ -14,15 +14,15 @@ class VectorRepository:
         thread_id: str,
         match_count: int = 4,
     ):
-        """_summary_
+        """Find the most similar document chunks for a thread.
 
         Args:
-            query_embedding (_type_): _description_
-            thread_id (str): _description_
-            match_count (int, optional): _description_. Defaults to 4.
+            query_embedding: Vector representation of the search query.
+            thread_id: Conversation thread used to scope the search.
+            match_count: Maximum number of chunks to return.
 
         Returns:
-            _type_: _description_
+            A list of matching document chunk records.
         """
         result = self.supabase.rpc(
             "match_document_chunks",

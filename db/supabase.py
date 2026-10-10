@@ -10,11 +10,7 @@ from config.settings import (
 )
 
 def create_supabase_client() -> Client:
-    """_summary_
-
-    Returns:
-        Client: _description_
-    """
+    """Create an authenticated Supabase client from application settings."""
     return supabase.create_client(
         SUPABASE_URL,
         SUPABASE_SERVICE_KEY,

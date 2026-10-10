@@ -2,11 +2,10 @@
 Alpha Vantage Client for fetching stock data.
 """
 import requests
-from config.settings import ALPHA_KEY
+from config.settings import ALPHA_KEY, ALPHA_VANTAGE_URL, HTTP_TIMEOUT_SECONDS
 
 class AlphaVantageClient:
-    """_summary_
-    """
+    """Client for retrieving stock quotes from Alpha Vantage."""
     def get_global_quote(self, symbol: str) -> dict:
         """
         Fetch the latest stock price for a given symbol using Alpha Vantage.
@@ -18,11 +17,11 @@ class AlphaVantageClient:
             dict: The JSON response from the Alpha Vantage API containing stock data.
         """
         url = (
-            "https://www.alphavantage.co/query"
+            f"{ALPHA_VANTAGE_URL}"
             f"?function=GLOBAL_QUOTE"
             f"&symbol={symbol}"
             f"&apikey={ALPHA_KEY}"
         )
 
-        response = requests.get(url, timeout=10)
+        response = requests.get(url, timeout=HTTP_TIMEOUT_SECONDS)
         return response.json()
