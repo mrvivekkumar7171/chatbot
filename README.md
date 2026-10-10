@@ -1,8 +1,6 @@
 ## Self Modifying Coding Agent
 
-[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://your-app-name.streamlit.app/?embed=true&embed_options=light_theme)
-
-[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://your-app-name.streamlit.app/?embed=true&embed_options=dark_theme)
+[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://self-modifying-coding-agent.streamlit.app/?embed=true&embed_options=dark_theme)
 
 
 ![Workflow](/docs/img/langgraph_workflow.png)
