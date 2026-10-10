@@ -4,9 +4,10 @@ Weather Service for fetching current weather information.
 from clients.weather_api import WeatherAPIClient
 
 class WeatherService:
-    """_summary_
-    """
+    """Provide current weather through the configured weather client."""
+
     def __init__(self):
+        """Initialize the weather API client."""
         self.client = WeatherAPIClient()
 
     def get_current_weather(self, city: str) -> dict:

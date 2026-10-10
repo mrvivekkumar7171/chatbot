@@ -7,6 +7,7 @@ class ConversationHistoryRepository:
     """Stores and retrieves completed conversation turns."""
 
     def __init__(self, supabase_client):
+        """Initialize the repository with a Supabase client."""
         self.supabase = supabase_client
 
     def upsert_turn(
@@ -19,6 +20,7 @@ class ConversationHistoryRepository:
         assistant_content: str,
         embedding: list[float],
     ) -> None:
+        """Insert or update one semantically searchable conversation turn."""
         self.supabase.table("conversation_turns").upsert(
             {
                 "user_id": user_id,
@@ -40,6 +42,7 @@ class ConversationHistoryRepository:
         thread_id: str,
         match_count: int,
     ) -> list[dict]:
+        """Return semantically similar conversation turns for a thread."""
         result = self.supabase.rpc(
             "match_conversation_turns",
             {
@@ -58,6 +61,7 @@ class ConversationHistoryRepository:
         thread_id: str,
         limit: int,
     ) -> list[dict]:
+        """Return the most recent conversation turns for a thread."""
         result = (
             self.supabase
             .table("conversation_turns")

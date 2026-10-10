@@ -1,6 +1,6 @@
 """
 Backend for the LangGraph AI chatbot, handling LLM calls, memory, tools, PDF processing, and RAG.
-Uses Groq for the LLM, Hugging Face embeddings for vector generation, and Supabase for storage,
+Uses Groq for the LLM, Gemini hosted embeddings, and Supabase for storage,
 PostgreSQL, pgvector, chat history, checkpoints, and long-term user memory.
 """
 from __future__ import annotations

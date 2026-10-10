@@ -12,9 +12,10 @@ from langchain_community.document_loaders import PyPDFLoader
 
 
 class RAGIngestion:
-    """_summary_
-    """
+    """Extract PDF text, create embeddings, and persist document chunks."""
+
     def __init__(self, supabase_client, embeddings):
+        """Initialize ingestion with storage and embedding clients."""
         self.supabase = supabase_client
         self.embeddings = embeddings
 

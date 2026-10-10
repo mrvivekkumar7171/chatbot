@@ -7,11 +7,13 @@ import uuid
 
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 from langchain_core.tracers.context import collect_runs
+from langgraph.errors import GraphRecursionError
 from langgraph.types import Command
 from langsmith import Client
 import streamlit as st
 
 from backend import chatbot, retrieve_all_threads, get_thread_metadata, ingest_pdf
+from config.settings import MAX_ITERATIONS
 
 # Replace this with the authenticated user's stable identifier when auth is added.
 CURRENT_USER_ID = "user_123"
@@ -128,6 +130,7 @@ selected_thread = None
 # Base configuration for LangGraph execution
 CONFIG = {
     "run_name": "Self_Mod_Coding_Agent",
+    "recursion_limit": MAX_ITERATIONS,
     "configurable": {
         "thread_id": THREAD_KEY,
         "user_id": CURRENT_USER_ID
@@ -264,37 +267,43 @@ def stream_graph_response(input_payload):
             """
             # 1. Wrap execution in collect_runs to capture the trace ID
             with collect_runs() as cb:
-                for message_chunk, metadata in chatbot.stream(
-                    input_payload,
-                    config=CONFIG,
-                    stream_mode="messages",
-                ):
-                    # Filter out the internal node output : LangGraph streams ALL LLM calls.
-                    # We only want the 'chat_node' output.
-                    if (
-                        metadata.get("langgraph_node") != "chat_node"
+                try:
+                    for message_chunk, metadata in chatbot.stream(
+                        input_payload,
+                        config=CONFIG,
+                        stream_mode="messages",
                     ):
-                        continue
+                        # Filter out the internal node output : LangGraph streams ALL LLM calls.
+                        # We only want the 'chat_node' output.
+                        if (
+                            metadata.get("langgraph_node") != "chat_node"
+                        ):
+                            continue
 
-                    # Handle Tool Execution Updates
-                    if isinstance(message_chunk, ToolMessage):
-                        tool_name = getattr(message_chunk, "name", "tool")
-                        if status_holder["box"] is None:
-                            status_holder["box"] = st.status(
-                                f"🔧 Using `{tool_name}` …",
-                                expanded=True
-                                )
-                        else:
-                            status_holder["box"].update(
-                                label=f"🔧 Using `{tool_name}` …",
-                                state="running", expanded=True
-                                )
+                        # Handle Tool Execution Updates
+                        if isinstance(message_chunk, ToolMessage):
+                            tool_name = getattr(message_chunk, "name", "tool")
+                            if status_holder["box"] is None:
+                                status_holder["box"] = st.status(
+                                    f"🔧 Using `{tool_name}` …",
+                                    expanded=True
+                                    )
+                            else:
+                                status_holder["box"].update(
+                                    label=f"🔧 Using `{tool_name}` …",
+                                    state="running", expanded=True
+                                    )
 
-                    # Handle AI Text Updates
-                    if isinstance(message_chunk, AIMessage):
-                        if message_chunk.content:
-                            # Yield the content of AIMessage instead of Return for streaming
-                            yield message_chunk.content
+                        # Handle AI Text Updates
+                        if isinstance(message_chunk, AIMessage):
+                            if message_chunk.content:
+                                # Yield the content of AIMessage instead of Return for streaming
+                                yield message_chunk.content
+                except GraphRecursionError:
+                    yield (
+                        "\n\nI stopped this response after reaching the "
+                        f"{MAX_ITERATIONS}-iteration safety limit."
+                    )
 
                 # 2. Capture the run_id of the completed generation and store in session state
                 if cb.traced_runs:

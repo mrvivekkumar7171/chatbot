@@ -31,10 +31,12 @@ _FORBIDDEN_ARGUMENTS = {"-delete", "-exec", "-execdir", "-ok", "-okdir"}
 
 
 def _workspace_root() -> Path:
+    """Return the resolved workspace root used for sandbox validation."""
     return Path(os.environ.get("AGENT_WORKSPACE", "workspace")).resolve()
 
 
 def _within_workspace(path: Path, workspace: Path) -> bool:
+    """Return whether a resolved path is inside the workspace directory."""
     try:
         path.relative_to(workspace)
         return True
@@ -43,6 +45,7 @@ def _within_workspace(path: Path, workspace: Path) -> bool:
 
 
 def _has_outside_path_argument(args: list[str]) -> bool:
+    """Return whether command arguments attempt to address an outside path."""
     for arg in args[1:]:
         normalized = arg.replace("\\", "/")
         if normalized.startswith("/") or normalized.startswith("../"):

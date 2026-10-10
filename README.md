@@ -26,7 +26,7 @@ create table document_chunks (
     thread_id text not null,
     content text not null,
     page_number integer,
-    embedding vector(384),
+    embedding vector(768),
     metadata jsonb default '{}'::jsonb,
     created_at timestamptz default now()
 );
@@ -38,9 +38,9 @@ create index document_chunks_embedding_idx
 on document_chunks
 using hnsw (embedding vector_cosine_ops);
 
--- find the top 4 similar chunks and 384-dimension of HuggingFaceEmbeddings
+-- find the top 4 similar chunks using 768-dimensional hosted embeddings
 create or replace function match_document_chunks(
-    query_embedding vector(384),
+    query_embedding vector(768),
     match_thread_id text,
     match_count int default 4
 )
@@ -100,7 +100,7 @@ create table conversation_turns (
     user_content text not null,
     assistant_content text not null,
     content text not null,
-    embedding vector(384) not null,
+    embedding vector(768) not null,
     created_at timestamptz not null default now(),
     updated_at timestamptz not null default now(),
     constraint conversation_turns_user_thread_turn_key
@@ -115,7 +115,7 @@ on conversation_turns
 using hnsw (embedding vector_cosine_ops);
 
 create or replace function match_conversation_turns(
-    query_embedding vector(384),
+    query_embedding vector(768),
     match_user_id text,
     match_thread_id text,
     match_count int default 5
@@ -200,7 +200,5 @@ Only the `workspace` directory is mounted from the host, so generated files rema
 https://smith.langchain.com/
 
 ## Features to Add in the Future
-1. Image and audio models: multimodal AI
-check if there is max terns or not to prevent infinte loop if the model is not able to generate a response. If the model reaches the maximum number of turns, it should stop generating responses and return an appropriate message to the user.
-orchestration
+1. Orchestration
 2. Add user authentication and authorization

@@ -2,9 +2,10 @@
 RAG Retriever for searching document chunks.
 """
 class RAGRetriever:
-    """_summary_
-    """
+    """Retrieve semantically relevant document chunks."""
+
     def __init__(self, embeddings, vector_repository):
+        """Initialize retrieval with embedding and vector repositories."""
         self.embeddings = embeddings
         self.vector_repository = vector_repository
 

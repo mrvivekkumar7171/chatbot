@@ -4,11 +4,9 @@ langgraph
 langchain_mcp_adapters
 langchain_community
 langchain_groq
-langchain_huggingface
-sentence_transformers
 dotenv
 streamlit
-torchvision
+google-genai
 langchain_core
 pypdf
 faiss-cpu

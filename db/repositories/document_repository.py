@@ -2,9 +2,10 @@
 Repository for managing document-related operations in the database.
 """
 class DocumentRepository:
-    """_summary_
-    """
+    """Retrieve document metadata and filenames from Supabase."""
+
     def __init__(self, supabase_client):
+        """Initialize the repository with a Supabase client."""
         self.supabase = supabase_client
 
     def get_thread_file_names(self, thread_id: str) -> list[str]:

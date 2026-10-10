@@ -5,9 +5,10 @@ import os
 from config.settings import RAG_MAX_PAGES_LIMIT
 
 class RAGService:
-    """_summary_
-    """
+    """Coordinate document ingestion and semantic retrieval."""
+
     def __init__(self, ingestion, retriever):
+        """Initialize the service with ingestion and retrieval handlers."""
         self.ingestion = ingestion
         self.retriever = retriever
 

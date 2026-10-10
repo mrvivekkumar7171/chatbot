@@ -2,9 +2,10 @@
 Vector Repository for managing vector-based document searches.
 """
 class VectorRepository:
-    """_summary_
-    """
+    """Search document chunks using Supabase pgvector RPCs."""
+
     def __init__(self, supabase_client):
+        """Initialize the repository with a Supabase client."""
         self.supabase = supabase_client
 
     def search_document_chunks(
