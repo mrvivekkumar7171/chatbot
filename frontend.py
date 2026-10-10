@@ -12,7 +12,6 @@ from langgraph.types import Command
 from langsmith import Client
 import streamlit as st
 
-from backend import chatbot, retrieve_all_threads, get_thread_metadata, ingest_pdf
 from config.settings import (
     APP_LAYOUT,
     APP_PAGE_ICON,
@@ -26,6 +25,18 @@ from config.settings import (
     MAX_ITERATIONS,
     PDF_FILE_EXTENSION,
 )
+from auth import logout, require_totp_authentication
+
+st.set_page_config(
+    layout=APP_LAYOUT,
+    page_title=APP_PAGE_TITLE,
+    page_icon=APP_PAGE_ICON,
+)
+
+if not require_totp_authentication():
+    st.stop()
+
+from backend import chatbot, retrieve_all_threads, get_thread_metadata, ingest_pdf
 
 # =========================== Utilities ===========================
 def generate_thread_id()  -> uuid.UUID:
@@ -153,13 +164,12 @@ CONFIG = {
     "tags": LANGGRAPH_TAGS
 }
 
-st.set_page_config(
-    layout=APP_LAYOUT,
-    page_title=APP_PAGE_TITLE,
-    page_icon=APP_PAGE_ICON,
-)
 st.title(APP_TITLE)
 # ============================ Sidebar ============================
+if st.sidebar.button("Log out", use_container_width=True):
+    logout()
+    st.rerun()
+
 # Button to start a fresh conversation
 if st.sidebar.button("New Chat", use_container_width=True):
     reset_chat()

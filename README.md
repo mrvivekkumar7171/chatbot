@@ -164,7 +164,11 @@ conda activate chatbot
 pip install -r requirements.txt
 ```
 
-### Step 6: Start the application
+### Step 6: Configure authentication
+
+The Streamlit app uses a private TOTP authenticator. Set `TOTP_SECRET` in `.env` to the Base32 secret created for the authorized person.
+
+### Step 7: Start the application
 
 From the project directory, run:
 
@@ -172,9 +176,14 @@ From the project directory, run:
 streamlit run frontend.py
 ```
 
+On each browser session, enter the current six-digit code from Google
+Authenticator. Codes expire every 30 seconds; only the person with the
+authenticator device configured with that secret can sign in. Use the **Log
+out** button to clear the authenticated session.
+
 On startup, the application will automatically initialize the LangGraph checkpoint and long-term-memory store tables.
 
-### Step 7: Run in the Docker sandbox
+### Step 8: Run in the Docker sandbox
 
 The terminal tool only permits read-only inspection commands, and code writes are restricted to `/app/workspace`. Build and run the container from the project directory:
 
@@ -195,10 +204,6 @@ docker run --rm -p 8501:8501 --name agent-container \
 
 Only the `workspace` directory is mounted from the host, so generated files remain persistent without exposing the rest of the host filesystem.
 
-### Step 8: Visit LangSmith
+### Step 9: Visit LangSmith
 
 https://smith.langchain.com/
-
-## Features to Add in the Future
-1. Orchestration
-2. Add user authentication and authorization

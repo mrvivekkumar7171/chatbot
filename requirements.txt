@@ -6,6 +6,7 @@ langchain_community
 langchain_groq
 dotenv
 streamlit
+pyotp
 google-genai
 langchain_core
 pypdf
