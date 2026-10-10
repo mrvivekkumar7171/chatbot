@@ -1,4 +1,10 @@
 ## Self Modifying Coding Agent
+
+[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://your-app-name.streamlit.app/?embed=true&embed_options=light_theme)
+
+[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://your-app-name.streamlit.app/?embed=true&embed_options=dark_theme)
+
+
 ![Workflow](/docs/img/langgraph_workflow.png)
 
 ## Server Setup Instructions
@@ -189,7 +195,7 @@ The terminal tool only permits read-only inspection commands, and code writes ar
 
 ```powershell
 docker build -t self-mod-agent .
-docker run --rm -p 8501:8501 --name agent-container `
+docker run --rm -p 7860:7860 --name agent-container `
   -v "${PWD}\workspace:/app/workspace" `
   self-mod-agent
 ```
@@ -197,7 +203,7 @@ docker run --rm -p 8501:8501 --name agent-container `
 On Bash or macOS/Linux, use this equivalent volume mount:
 
 ```shell
-docker run --rm -p 8501:8501 --name agent-container \
+docker run --rm -p 7860:7860 --name agent-container \
   -v "$(pwd)/workspace:/app/workspace" \
   self-mod-agent
 ```

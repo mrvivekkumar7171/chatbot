@@ -64,7 +64,7 @@ def build_chatbot(
     # Compile the Graph (passes the checkpointer object at the compilation to add it at each steps)
     app = graph.compile(checkpointer=checkpointer, store=store)
 
-    with open("docs/img/langgraph_workflow.png", "wb") as f:
-        f.write(app.get_graph().draw_mermaid_png())
+    # with open("docs/img/langgraph_workflow.png", "wb") as f:
+    #     f.write(app.get_graph().draw_mermaid_png())
 
     return app

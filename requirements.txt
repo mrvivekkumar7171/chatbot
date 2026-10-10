@@ -1,7 +1,5 @@
-ddgs
 langgraph.checkpoint.sqlite
 langgraph
-langchain_mcp_adapters
 langchain_community
 langchain_groq
 dotenv
@@ -10,8 +8,6 @@ pyotp
 google-genai
 langchain_core
 pypdf
-faiss-cpu
 supabase
 langgraph-checkpoint-postgres
 psycopg[binary, pool]
-Pylint
